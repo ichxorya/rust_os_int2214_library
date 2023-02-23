@@ -1,6 +1,10 @@
 pub mod preemptive;
 pub mod nonpreemptive;
 
+use std::cmp::Reverse;
+use std::fmt::{Debug, Display};
+use std::collections::BinaryHeap;
+
 /// `Process` struct.
 pub struct Process {
     pub pid: u32,
@@ -16,6 +20,39 @@ pub struct Process {
 
     pub start_time: f32,
     pub finish_time: f32,
+}
+
+/// Implement `Debug` trait for `Process` struct.
+impl Debug for Process {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Process")
+            .field("pid", &self.pid)
+            .field("arrival_time", &self.arrival_time)
+            .field("burst_time", &self.burst_time)
+            .field("remaining_time", &self.remaining_time)
+            .field("waiting_time", &self.waiting_time)
+            .field("turn_around_time", &self.turn_around_time)
+            .field("priority", &self.priority)
+            .field("section_finish_time", &self.section_finish_time)
+            .field("start_time", &self.start_time)
+            .field("finish_time", &self.finish_time)
+            .finish()
+    }
+}
+
+/// Implement `Display` trait for `Process` struct.
+impl Display for Process {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // write!(
+        //     f,
+        //     "P{}\t\t{:.2}\t\t{:.2}\t\t{:.2}\t\t{:.2}\t\t\t{:.2}",
+        //     self.pid, self.arrival_time, self.burst_time, self.waiting_time, self.turn_around_time, self.finish_time
+        // )
+        write!(
+            f,
+            "P{}", self.pid
+        )
+    }
 }
 
 /// Implement `Clone` trait for `Process` struct.
@@ -45,13 +82,6 @@ impl PartialEq for Process {
 
 /// Implement `Eq` trait for `Process` struct.
 impl Eq for Process {}
-
-/// Implement `PartialOrd` trait for `Process` struct.
-impl PartialOrd for Process {
-    fn partial_cmp(&self, other: &Process) -> Option<std::cmp::Ordering> {
-        self.arrival_time.partial_cmp(&other.arrival_time)
-    }
-}
 
 /// Implement `Hash` trait for `Process` struct.
 impl std::hash::Hash for Process {
@@ -103,7 +133,6 @@ fn non_negative_check(arrival_time: f32, burst_time: f32) {
         panic!("Process parameters must be a non negative real number.");
     }
 }
-
 /// `Event` struct.
 pub struct Event {
     pub name: String,
