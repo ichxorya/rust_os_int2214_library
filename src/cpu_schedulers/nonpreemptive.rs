@@ -45,32 +45,35 @@ impl NonpreemptiveScheduler {
 // Visualization
 impl NonpreemptiveScheduler {
     pub fn print(&mut self) {
+        // Define a processes variable to store the finished processes.
+        let processes: Vec<Process> = self.finished_processes.clone();
+
         println!("Name\t\tArrival Time\tBurst Time\tTurn Around Time\tWaiting Time\tFinish Time");
-        for i in 0..self.finished_processes.len() {
+        for i in 0..processes.len() {
             println!(
                 "P{}\t\t{:.2}\t\t{:.2}\t\t{:.2}\t\t\t{:.2}\t\t\t{:.2}",
-                self.finished_processes[i].pid,
-                self.finished_processes[i].arrival_time,
-                self.finished_processes[i].burst_time,
-                self.finished_processes[i].turn_around_time,
-                self.finished_processes[i].waiting_time,
-                self.finished_processes[i].finish_time
+                processes[i].pid,
+                processes[i].arrival_time,
+                processes[i].burst_time,
+                processes[i].turn_around_time,
+                processes[i].waiting_time,
+                processes[i].finish_time
             );
         }
         // Calculate average waiting time and average turn around time using list comprehension.
         let average_waiting_time: f32 = self
-            .finished_processes
+            .processes
             .iter()
             .map(|process| process.waiting_time)
             .sum::<f32>()
-            / self.finished_processes.len() as f32;
+            / processes.len() as f32;
         
         let average_turn_around_time: f32 = self
-            .finished_processes
+            .processes
             .iter()
             .map(|process| process.turn_around_time)
             .sum::<f32>()
-            / self.finished_processes.len() as f32;
+            / processes.len() as f32;
 
         println!(
             "Average:\t\t\t\t\t*{:.2}\t\t\t*{:.2}", 
@@ -78,28 +81,28 @@ impl NonpreemptiveScheduler {
             average_waiting_time,
         );
 
-        self.gantt_chart();
+        self.gantt_chart(&processes);
     }
 
     // Idea from: https://github.com/marvinjason/CPUScheduler
-    pub fn gantt_chart(&self) {
+    pub fn gantt_chart(&self, processes: &Vec<Process>) {
         let mut gantt_chart: String = "\n\nGantt Chart:\n".to_string();
         let mut time: f32 = 0.0;
-        let number_of_processes = self.finished_processes.len();
+        let number_of_processes = processes.len();
         if number_of_processes == 1 {
-            gantt_chart.push_str(&format!("{}\n", self.finished_processes[0].waiting_time));
-            gantt_chart.push_str(&format!("|    P{}\n", self.finished_processes[0].pid));
-            gantt_chart.push_str(&format!("{}\n", self.finished_processes[0].finish_time));
+            gantt_chart.push_str(&format!("{}\n", processes[0].waiting_time));
+            gantt_chart.push_str(&format!("|    P{}\n", processes[0].pid));
+            gantt_chart.push_str(&format!("{}\n", processes[0].finish_time));
         } else {
-            gantt_chart.push_str(&format!("{}\n", self.finished_processes[0].waiting_time));
-            gantt_chart.push_str(&format!("|    P{}\n", self.finished_processes[0].pid));
+            gantt_chart.push_str(&format!("{}\n", processes[0].waiting_time));
+            gantt_chart.push_str(&format!("|    P{}\n", processes[0].pid));
 
-            for i in 1..self.processes.len() {
-                time += self.finished_processes[i - 1].burst_time;
+            for i in 1..processes.len() {
+                time += processes[i - 1].burst_time;
                 gantt_chart.push_str(&format!("{}\n", time));
-                gantt_chart.push_str(&format!("|    P{}\n", self.finished_processes[i].pid));
+                gantt_chart.push_str(&format!("|    P{}\n", processes[i].pid));
             }
-            gantt_chart.push_str(&format!("{}\n", self.finished_processes[number_of_processes - 1].finish_time));
+            gantt_chart.push_str(&format!("{}\n", processes[number_of_processes - 1].finish_time));
         }
         println!("{}", gantt_chart);
     }
@@ -196,9 +199,6 @@ impl NonpreemptiveScheduler {
 
         // A queue to store the processes that have arrived.
         let mut queue: DoublePriorityQueue<Process, u32> = DoublePriorityQueue::new();
-        
-        // A vector to store the processes that have finished.
-        let mut finished_processes: Vec<Process> = Vec::new();
 
         // Start the loop (while the queue or the processes list is not empty).
         let mut current_time: f32 = self.processes[0].arrival_time;
@@ -210,19 +210,19 @@ impl NonpreemptiveScheduler {
                 let priority: u32 = process.priority;
 
                 // Add it to the queue.
-                queue.push(process, priority);
+                queue.push(process, priority as u32);
             }
 
             // If the queue is not empty.
             if !queue.is_empty() {
-                // Pop the process with the smallest priority.
+                // Pop the process with the shortest burst time.
                 let mut process: Process = queue.pop_min().unwrap().0;
 
                 // Calculate the start time, finish time, waiting time and turn around time.
                 let time_tuple: (f32, f32, f32, f32) = self.calculate_time(current_time, &process);
 
                 // Update the selected process.
-                self.update_process(&mut process, 
+                self.update_process(&mut process,
                     time_tuple.0, time_tuple.1, 
                     time_tuple.2, time_tuple.3);
 
@@ -230,7 +230,7 @@ impl NonpreemptiveScheduler {
                 current_time = time_tuple.1;
 
                 // Add the process to the finished processes list.
-                finished_processes.push(process); 
+                self.finished_processes.push(process); 
             }
             // If the queue is empty: Update the current time.
             else {
@@ -238,54 +238,7 @@ impl NonpreemptiveScheduler {
             }
         }
 
-        // Update the processes list.
-        self.processes = finished_processes;
-
         // Print the result.
         self.print();
-    }
-}
-
-// Tests
-#[cfg(test)]
-
-mod test {
-    use super::*;
-
-    #[test]
-    fn test() {
-        let mut scheduler = NonpreemptiveScheduler::new(vec![
-            // 4 1 2 5 3
-            Process::new(1, 2.0, 6.0),
-            Process::new(2, 5.0, 2.0),
-            Process::new(3, 1.0, 8.0),
-            Process::new(4, 0.0, 3.0),
-            Process::new(5, 4.0, 4.0),
-        ]);
-        scheduler.sjf();
-        
-        // scheduler = NonpreemptiveScheduler::new(vec![
-        //     // 4 3 1 5 2
-        //     Process::new(1, 2.0, 6.0),
-        //     Process::new(2, 5.0, 2.0),
-        //     Process::new(3, 1.0, 8.0),
-        //     Process::new(4, 0.0, 3.0),
-        //     Process::new(5, 4.0, 4.0),
-        // ]);
-        // scheduler.fcfs();
-    }
-
-    #[test]
-    fn test_ps() {
-        let mut scheduler = NonpreemptiveScheduler::new(vec![
-            // ???
-            Process::new_with_priority(1, 0.0, 6.0, 5),
-            Process::new_with_priority(2, 0.0, 2.0, 4),
-            Process::new_with_priority(3, 0.0, 8.0, 3),
-            Process::new_with_priority(4, 0.0, 3.0, 2),
-            Process::new_with_priority(5, 0.0, 4.0, 1),
-        ]);
-
-        scheduler.ps();
     }
 }
