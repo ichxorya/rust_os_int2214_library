@@ -6,18 +6,18 @@ use std::fmt::{Debug, Display};
 /// `Process` struct.
 pub struct Process {
     pub pid: u32,
-    pub arrival_time: f32,
-    pub burst_time: f32,
+    pub arrival_time: f64,
+    pub burst_time: f64,
 
-    pub remaining_time: f32,
-    pub waiting_time: f32,
-    pub turn_around_time: f32,
+    pub remaining_time: f64,
+    pub waiting_time: f64,
+    pub turn_around_time: f64,
     pub priority: u32,
 
-    pub section_finish_time: f32,
+    pub section_finish_time: f64,
 
-    pub start_time: f32,
-    pub finish_time: f32,
+    pub start_time: f64,
+    pub finish_time: f64,
 }
 
 /// Implement `Debug` trait for `Process` struct.
@@ -114,7 +114,7 @@ impl std::hash::Hash for Process {
 
 impl Process {
     /// Constructor for `Process` struct.
-    fn new(pid: u32, arrival_time: f32, burst_time: f32) -> Process {
+    fn new(pid: u32, arrival_time: f64, burst_time: f64) -> Process {
         time_check(arrival_time, burst_time);
         Process {
             pid,
@@ -132,7 +132,7 @@ impl Process {
     }
 
     /// Constructor for `Process` struct with priority.
-    fn new_with_priority(pid: u32, arrival_time: f32, burst_time: f32, priority: u32) -> Process {
+    fn new_with_priority(pid: u32, arrival_time: f64, burst_time: f64, priority: u32) -> Process {
         time_check(arrival_time, burst_time);
         Process {
             pid,
@@ -150,11 +150,15 @@ impl Process {
     }
 }
 
-fn time_check(arrival_time: f32, burst_time: f32) {
+fn more_than_two_decimal_places(num: f64) -> bool {
+    (num * 100.0) != (num * 100.0).ceil()
+}
+
+fn time_check(arrival_time: f64, burst_time: f64) {
     let negative: bool = (arrival_time < 0.0) || (burst_time < 0.0);
     let more_than_two_decimal_places: bool = 
-    (arrival_time.fract() * 100.0).round() / 100.0 != arrival_time.fract()
-    || (burst_time.fract() * 100.0).round() / 100.0 != burst_time.fract();
+    more_than_two_decimal_places(arrival_time)
+    || more_than_two_decimal_places(burst_time);
     if negative || more_than_two_decimal_places
     {
         panic!("Process parameters must be a non negative real number with less than 3 decimal places.");

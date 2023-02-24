@@ -17,25 +17,27 @@ impl NonpreemptiveScheduler {
         self.processes.sort_by(|a, b| a.arrival_time.partial_cmp(&b.arrival_time).unwrap());
     }
 
-    pub fn update_process(&mut self, process: &mut Process, start_time: f32, finish_time: f32, waiting_time: f32, turn_around_time: f32) {
+    pub fn update_process(&mut self, process: &mut Process, start_time: f64, finish_time: f64, waiting_time: f64, turn_around_time: f64) {
         process.start_time = start_time;
         process.finish_time = finish_time;
         process.waiting_time = waiting_time;
         process.turn_around_time = turn_around_time;
+        process.remaining_time = 0.0;
+        process.section_finish_time = finish_time;
     }
 
-    pub fn calculate_time(&mut self, current_time: f32, process: &Process) -> (f32, f32, f32, f32) {
+    pub fn calculate_time(&self, current_time: f64, process: &Process) -> (f64, f64, f64, f64) {
         // Start time = current time.
-        let start_time: f32 = current_time;
+        let start_time: f64 = current_time;
 
         // Finish time = start time + burst time.
-        let finish_time: f32 = start_time + process.burst_time;
+        let finish_time: f64 = start_time + process.burst_time;
 
         // Turn around time = finish time - arrival time.
-        let turn_around_time: f32 = finish_time - process.arrival_time;
+        let turn_around_time: f64 = finish_time - process.arrival_time;
 
         // Waiting time = turn around time - burst time.
-        let waiting_time: f32 = finish_time - process.arrival_time - process.burst_time;
+        let waiting_time: f64 = finish_time - process.arrival_time - process.burst_time;
 
         // Return the calculated times.
         (start_time, finish_time, waiting_time, turn_around_time)
@@ -61,19 +63,19 @@ impl NonpreemptiveScheduler {
             );
         }
         // Calculate average waiting time and average turn around time using list comprehension.
-        let average_waiting_time: f32 = self
+        let average_waiting_time: f64 = self
             .processes
             .iter()
             .map(|process| process.waiting_time)
-            .sum::<f32>()
-            / processes.len() as f32;
+            .sum::<f64>()
+            / processes.len() as f64;
         
-        let average_turn_around_time: f32 = self
+        let average_turn_around_time: f64 = self
             .processes
             .iter()
             .map(|process| process.turn_around_time)
-            .sum::<f32>()
-            / processes.len() as f32;
+            .sum::<f64>()
+            / processes.len() as f64;
 
         println!(
             "Average:\t\t\t\t\t*{:.2}\t\t\t*{:.2}", 
@@ -87,7 +89,7 @@ impl NonpreemptiveScheduler {
     // Idea from: https://github.com/marvinjason/CPUScheduler
     pub fn gantt_chart(&self, processes: &Vec<Process>) {
         let mut gantt_chart: String = "\n\nGantt Chart:\n".to_string();
-        let mut time: f32 = 0.0;
+        let mut time: f64 = 0.0;
         let number_of_processes = processes.len();
         if number_of_processes == 1 {
             gantt_chart.push_str(&format!("{}\n", processes[0].waiting_time));
@@ -116,13 +118,13 @@ impl NonpreemptiveScheduler {
         self.sort_by_arrival_time();
 
         // Calculate the waiting time and turn around time for each process.
-        let mut current_time: f32 = self.processes[0].arrival_time;
+        let mut current_time: f64 = self.processes[0].arrival_time;
         (0..self.processes.len()).for_each(|i: usize| {
             // Get the process.
             let mut process: Process = self.processes[i].clone();
 
             // Calculate the start time, finish time, waiting time and turn around time. 
-            let time_tuple: (f32, f32, f32, f32) = self.calculate_time(current_time, &process);
+            let time_tuple: (f64, f64, f64, f64) = self.calculate_time(current_time, &process);
 
             // Update the current time.
             current_time = time_tuple.1;
@@ -150,13 +152,13 @@ impl NonpreemptiveScheduler {
         let mut queue: DoublePriorityQueue<Process, u32> = DoublePriorityQueue::new();
 
         // Start the loop (while the queue or the processes list is not empty).
-        let mut current_time: f32 = self.processes[0].arrival_time;
+        let mut current_time: f64 = self.processes[0].arrival_time;
         while !queue.is_empty() || !self.processes.is_empty() {
             // While the processes list is not empty and the first process in the list has not arrived yet.
             while !self.processes.is_empty() && self.processes[0].arrival_time <= current_time {
                 // Pop the first process from the processes list.
                 let process: Process = self.processes.remove(0);
-                let burst_time: f32 = process.burst_time;
+                let burst_time: f64 = process.burst_time;
 
                 // Add it to the queue.
                 queue.push(process, burst_time as u32);
@@ -168,7 +170,7 @@ impl NonpreemptiveScheduler {
                 let mut process: Process = queue.pop_min().unwrap().0;
 
                 // Calculate the start time, finish time, waiting time and turn around time.
-                let time_tuple: (f32, f32, f32, f32) = self.calculate_time(current_time, &process);
+                let time_tuple: (f64, f64, f64, f64) = self.calculate_time(current_time, &process);
 
                 // Update the selected process.
                 self.update_process(&mut process,
@@ -201,7 +203,7 @@ impl NonpreemptiveScheduler {
         let mut queue: DoublePriorityQueue<Process, u32> = DoublePriorityQueue::new();
 
         // Start the loop (while the queue or the processes list is not empty).
-        let mut current_time: f32 = self.processes[0].arrival_time;
+        let mut current_time: f64 = self.processes[0].arrival_time;
         while !queue.is_empty() || !self.processes.is_empty() {
             // While the processes list is not empty and the first process in the list has not arrived yet.
             while !self.processes.is_empty() && self.processes[0].arrival_time <= current_time {
@@ -219,7 +221,7 @@ impl NonpreemptiveScheduler {
                 let mut process: Process = queue.pop_min().unwrap().0;
 
                 // Calculate the start time, finish time, waiting time and turn around time.
-                let time_tuple: (f32, f32, f32, f32) = self.calculate_time(current_time, &process);
+                let time_tuple: (f64, f64, f64, f64) = self.calculate_time(current_time, &process);
 
                 // Update the selected process.
                 self.update_process(&mut process,
@@ -241,4 +243,22 @@ impl NonpreemptiveScheduler {
         // Print the result.
         self.print();
     }
+}
+
+// Test the SJF, cfgtest
+#[test]
+fn test() {
+    let mut scheduler: NonpreemptiveScheduler = NonpreemptiveScheduler::new(
+        vec![
+            Process::new(1, 0.0, 3.0),
+            Process::new(2, 1.0, 0.01),
+            Process::new(3, 1.0, 0.01),
+            Process::new(4, 1.0, 0.01),
+            // Process::new(3, 1.0, 1.211),
+        ]
+    );
+
+
+    scheduler.sjf();
+
 }
